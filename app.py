@@ -75,7 +75,7 @@ def get_vectorstore(text_chunks, namespace="default"):
     return vs
 
 # Set up Q&A chain
-from langchain_community.chat_models import ChatOpenAI
+from langchain.chat_models import ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
 llm = ChatOpenAI(temperature=0, openai_api_key=OPENAI_API_KEY, model="gpt-4")
 chain = load_qa_chain(llm, chain_type="stuff")
@@ -100,5 +100,4 @@ if prompt := st.chat_input("Ask me anything about your uploads..."):
     docs = vs.similarity_search(prompt)
     answer = chain.run(input_documents=docs, question=prompt)
     st.session_state.messages.append({"role": "assistant", "content": answer})
-    with st.chat_message("assistant"):
-        st.markdown(answer)
+    with st.chat_message("assi
