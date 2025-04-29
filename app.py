@@ -91,14 +91,26 @@ for msg in st.session_state.messages:
         st.markdown(msg["content"])
 
 if prompt := st.chat_input("Ask me anything about your uploads..."):
+    # 1) Echo the user query in the chat
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # 2) Record it in history
     st.session_state.messages.append({"role": "user", "content": prompt})
-    # process PDFs into vectorstore if first query
+
+    # 3) Ensure vectorstore is ready
     if "vs" not in st.session_state:
-        # assume user has uploaded via st.file_uploader elsewhere
-        st.session_state.vs = get_vectorstore([get_pdf_text(f) for f in st.session_state.get('uploaded_files', [])], namespace="docs")
+        st.session_state.vs = get_vectorstore(
+            [get_pdf_text(f) for f in st.session_state.get('uploaded_files', [])],
+            namespace="docs"
+        )
     vs = st.session_state.vs
+
+    # 4) Run similarity search & QA chain
     docs = vs.similarity_search(prompt)
     answer = chain.run(input_documents=docs, question=prompt)
+
+    # 5) Append and display the assistant response
     st.session_state.messages.append({"role": "assistant", "content": answer})
     with st.chat_message("assistant"):
         st.markdown(answer)
