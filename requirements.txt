@@ -8,4 +8,5 @@ openai
 tiktoken
 langchain-openai
 langchain_pinecone
+langchain_community
 pycryptodome
