@@ -100,4 +100,5 @@ if prompt := st.chat_input("Ask me anything about your uploads..."):
     docs = vs.similarity_search(prompt)
     answer = chain.run(input_documents=docs, question=prompt)
     st.session_state.messages.append({"role": "assistant", "content": answer})
-    with st.chat_message("assi
+    with st.chat_message("assistant"):
+        st.markdown(answer)
