@@ -1,10 +1,10 @@
 langchain
 streamlit
-pinecone
+pinecone[grpc]
 python-dotenv
 time-python
 openai
 tiktoken
-langchain-community
 langchain-openai
+langchain_pinecone
 pycryptodome
