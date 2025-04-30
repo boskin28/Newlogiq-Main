@@ -53,11 +53,6 @@ chain = load_qa_chain(llm, chain_type="stuff")
 st.set_page_config(page_title="QA & Compare PDFs", page_icon=":page_facing_up:")
 st.title("📑 QA & Compare PDFs")
 
-# Ensure files and vector_ids exist
-if 'files' not in st.session_state or 'vector_ids' not in st.session_state:
-    st.error("Please run the uploader app first to upload and index documents.")
-    st.stop()
-
 # Load vectorstore once
 def get_vectorstore():
     if 'vs' not in st.session_state:
@@ -65,6 +60,14 @@ def get_vectorstore():
             embedding=embeddings, index_name=index_name, namespace="default"
         )
     return st.session_state.vs
+
+# Fetch available filenames from Pinecone metadata
+def get_filenames():
+    stats = index.describe_index_stats(namespace="default")
+    meta = stats['namespaces']['default'].get('metadata', {})
+    # metadata filename counts
+    filenames = list(meta.get('filename', {}).keys())
+    return filenames
 
 # Tabs
 tab1, tab2 = st.tabs(["Q&A", "Compare Sections"])
@@ -80,9 +83,9 @@ with tab1:
 
 with tab2:
     st.header("Compare Specific Sections in Two Documents")
-    names = list(st.session_state['vector_ids'].keys())
+    names = get_filenames()
     if len(names) < 2:
-        st.info("Index at least two documents in the uploader first.")
+        st.info("Index at least two documents using the Upload app first.")
     else:
         a = st.selectbox("First document", names, key="comp_a")
         b = st.selectbox("Second document", names, key="comp_b")
@@ -93,15 +96,14 @@ with tab2:
             # retrieve top chunks matching each section
             docs_a = vs.similarity_search(section_a, filter={"filename": a}, k=5)
             docs_b = vs.similarity_search(section_b, filter={"filename": b}, k=5)
-            # combine chunk texts
             text_a = "\n".join([d.page_content for d in docs_a])
             text_b = "\n".join([d.page_content for d in docs_b])
-            # compute and display cosine similarity
+            # compute cosine similarity
             embs_a = embeddings.embed_documents([text_a])
             embs_b = embeddings.embed_documents([text_b])
             sim = np.dot(embs_a[0], embs_b[0]) / (np.linalg.norm(embs_a[0]) * np.linalg.norm(embs_b[0]))
             st.metric("Section Cosine Similarity", f"{sim:.3f}")
-            # summary of section comparison
+            # summary
             prompt = (
                 f"Compare the section '{section_a}' in document '{a}' "
                 f"with the section '{section_b}' in document '{b}'. "
@@ -111,7 +113,7 @@ with tab2:
             summary = chain.run(input_documents=merged_docs, question=prompt)
             st.subheader("Section Comparison Summary")
             st.write(summary)
-            # show line-by-line diff
+            # detailed diff
             diff = difflib.unified_diff(
                 text_a.splitlines(), text_b.splitlines(),
                 fromfile=f"{a}:{section_a}", tofile=f"{b}:{section_b}", lineterm=""
