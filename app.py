@@ -57,14 +57,14 @@ st.title("📑 QA & Compare PDFs")
 def get_vectorstore():
     if 'vs' not in st.session_state:
         st.session_state.vs = PineconeVectorStore.from_existing_index(
-            embedding=embeddings, index_name=index_name, namespace="default"
+            embedding=embeddings, index_name=index_name, namespace="KENDRA"
         )
     return st.session_state.vs
 
 # Fetch available filenames from Pinecone metadata
 def get_filenames():
-    stats = index.describe_index_stats(namespace="default")
-    meta = stats['namespaces']['default'].get('metadata', {})
+    stats = index.describe_index_stats(namespace="KENDRA")
+    meta = stats['namespaces']['KENDRA'].get('metadata', {})
     # metadata filename counts
     filenames = list(meta.get('filename', {}).keys())
     return filenames
