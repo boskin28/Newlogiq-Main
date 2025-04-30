@@ -6,6 +6,7 @@ import numpy as np
 import hmac
 from langchain.chat_models import ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
+import difflib
 
 # Authentication (reuse from uploader)
 def check_password():
@@ -92,15 +93,13 @@ with tab2:
             # retrieve top chunks matching each section
             docs_a = vs.similarity_search(section_a, filter={"filename": a}, k=5)
             docs_b = vs.similarity_search(section_b, filter={"filename": b}, k=5)
-            # embed the retrieved chunk texts
-            texts_a = [d.page_content for d in docs_a]
-            texts_b = [d.page_content for d in docs_b]
-            embs_a = embeddings.embed_documents(texts_a)
-            embs_b = embeddings.embed_documents(texts_b)
-            avg_a = np.mean(np.array(embs_a), axis=0)
-            avg_b = np.mean(np.array(embs_b), axis=0)
-            # cosine similarity
-            sim = np.dot(avg_a, avg_b) / (np.linalg.norm(avg_a) * np.linalg.norm(avg_b))
+            # combine chunk texts
+            text_a = "\n".join([d.page_content for d in docs_a])
+            text_b = "\n".join([d.page_content for d in docs_b])
+            # compute and display cosine similarity
+            embs_a = embeddings.embed_documents([text_a])
+            embs_b = embeddings.embed_documents([text_b])
+            sim = np.dot(embs_a[0], embs_b[0]) / (np.linalg.norm(embs_a[0]) * np.linalg.norm(embs_b[0]))
             st.metric("Section Cosine Similarity", f"{sim:.3f}")
             # summary of section comparison
             prompt = (
@@ -108,8 +107,14 @@ with tab2:
                 f"with the section '{section_b}' in document '{b}'. "
                 "What are their main similarities and differences?"
             )
-            merged_docs = [type('D',(),{'page_content': ' '.join(texts_a)})(),
-                           type('D',(),{'page_content': ' '.join(texts_b)})()]
+            merged_docs = [type('D',(),{'page_content': text_a})(), type('D',(),{'page_content': text_b})()]
             summary = chain.run(input_documents=merged_docs, question=prompt)
             st.subheader("Section Comparison Summary")
             st.write(summary)
+            # show line-by-line diff
+            diff = difflib.unified_diff(
+                text_a.splitlines(), text_b.splitlines(),
+                fromfile=f"{a}:{section_a}", tofile=f"{b}:{section_b}", lineterm=""
+            )
+            st.subheader("Detailed Diff")
+            st.code("\n".join(diff), language='diff')
