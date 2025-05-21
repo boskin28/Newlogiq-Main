@@ -7,7 +7,6 @@ from langchain_pinecone import PineconeVectorStore
 import hmac
 
 # Authentication
-
 def check_password():
     def login_form():
         with st.form("Credentials"):
@@ -48,7 +47,8 @@ page_title = st.secrets.get('PAGE_TITLE', 'Q&A App')
 
 # Initialize Pinecone client & OpenAI embeddings
 pc = Pinecone(api_key=PINECONE_API_KEY)
-index = pc.Index(host=st.secrets['HOST'])
+# Updated way to access the index in new Pinecone SDK
+index = pc.Index(index_name)
 embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
 
 def get_pdf_text(pdf_file):
@@ -75,7 +75,7 @@ def get_vectorstore(text_chunks, namespace="default"):
     return vs
 
 # Set up Q&A chain
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
 llm = ChatOpenAI(temperature=0, openai_api_key=OPENAI_API_KEY, model="gpt-4")
 chain = load_qa_chain(llm, chain_type="stuff")
